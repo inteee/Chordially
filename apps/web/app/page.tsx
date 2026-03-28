@@ -1,49 +1,34 @@
-const links = [
-  {
-    href: "#artists",
-    title: "Artist Flow",
-    description: "Go live, share your page, and collect real-time support."
-  },
-  {
-    href: "#fans",
-    title: "Fan Flow",
-    description: "Discover live sets and drop a chord in seconds."
-  },
-  {
-    href: "#admins",
-    title: "Admin Flow",
-    description: "Monitor users, sessions, and transactions from one dashboard."
-  }
-];
+import Link from "next/link";
+import { Shell } from "../components/layout/shell";
+import { Card } from "../components/ui/card";
+import { getArtist } from "../lib/artist";
 
 export default function HomePage() {
-  return (
-    <main className="page-shell">
-      <section className="hero">
-        <p className="eyebrow">Chordially</p>
-        <h1>Digital busking for artists, fans, and operators.</h1>
-        <p className="lede">
-          A monorepo starter for real-time artist sessions, fan tipping, and
-          admin operations on Stellar.
-        </p>
-        <div className="cta-row">
-          <a className="primary-link" href="#artists">
-            Explore the product surface
-          </a>
-          <a className="secondary-link" href="https://stellar.org">
-            Stellar network
-          </a>
-        </div>
-      </section>
+  const artist = getArtist();
 
-      <section className="grid">
-        {links.map((link) => (
-          <article className="card" id={link.href.slice(1)} key={link.title}>
-            <p className="card-label">{link.title}</p>
-            <p className="card-copy">{link.description}</p>
-          </article>
-        ))}
-      </section>
-    </main>
+  return (
+    <Shell
+      title="Artist onboarding that leads directly to a public profile."
+      subtitle="This branch adds a guided artist setup flow and a public artist page that can ship before backend profile storage exists."
+    >
+      <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+        <Card title="Onboarding">
+          <p className="muted">
+            Capture stage name, location, genres, bio, and a Stellar wallet in one focused setup form.
+          </p>
+          <a className="button" href="/artist/onboarding">
+            Start artist setup
+          </a>
+        </Card>
+        <Card title="Profile preview">
+          <p className="muted">
+            Current demo artist: <strong>{artist.stageName}</strong>
+          </p>
+          <Link className="profile-link" href={`/artists/${artist.slug}`}>
+            Open public profile
+          </Link>
+        </Card>
+      </div>
+    </Shell>
   );
 }

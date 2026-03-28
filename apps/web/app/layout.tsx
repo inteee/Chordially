@@ -1,13 +1,14 @@
-import "./globals.css";
 import type { Metadata } from "next";
-import { ReactNode } from "react";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Chordially",
-  description: "Digital busking for artists and fans powered by Stellar."
+  title: "Chordially Artist Onboarding",
+  description: "Artist onboarding and public profile preview."
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body>{children}</body>
