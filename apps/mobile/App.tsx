@@ -1,9 +1,26 @@
-import { useState } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, Text, View, TextInput, Pressable } from "react-native";
+import { useMemo, useState } from "react";
+import { Linking, SafeAreaView, ScrollView, StyleSheet, Text, View, TextInput, Pressable } from "react-native";
 
 import { mobileConfig } from "./src/config";
 
-type Screen = "home" | "resetRequest" | "resetComplete" | "verifyPending";
+type Screen = "home" | "resetRequest" | "resetComplete" | "verifyPending" | "restricted";
+
+function AuthField(props: {
+  label: string;
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder: string;
+  secure?: boolean;
+  error?: string;
+}) {
+  return (
+    <View style={{ gap: 4 }}>
+      <Text>{props.label}</Text>
+      <TextInput style={styles.input} value={props.value} onChangeText={props.onChangeText} placeholder={props.placeholder} secureTextEntry={props.secure} />
+      {props.error ? <Text style={{ color: "#a83d1b" }}>{props.error}</Text> : null}
+    </View>
+  );
+}
 
 export default function App() {
   const [state, setState] = useState(authStore.getState());
@@ -21,6 +38,25 @@ export default function App() {
 
   if (state.isBooting) {
     return <View style={styles.container}><Text style={styles.title}>Booting auth…</Text></View>;
+  }
+
+  async function parseDeepLink() {
+    const url = await Linking.getInitialURL();
+    if (!url) return;
+    try {
+      const parsed = new URL(url);
+      if (parsed.pathname.includes("verify")) {
+        setScreen("verifyPending");
+        setToken(parsed.searchParams.get("token") ?? "");
+      } else if (parsed.pathname.includes("reset")) {
+        setScreen("resetComplete");
+        setToken(parsed.searchParams.get("token") ?? "");
+      } else {
+        setMsg("Unsupported auth callback link.");
+      }
+    } catch {
+      setMsg("Malformed auth callback link.");
+    }
   }
 
   return (
@@ -50,22 +86,26 @@ export default function App() {
             <Pressable style={styles.btn} onPress={() => setScreen("verifyPending")}><Text>Verify Pending</Text></Pressable>
             <Pressable style={styles.btn} onPress={logout}><Text>Logout</Text></Pressable>
           </View>
+          <View style={styles.row}>
+            <Pressable style={styles.btn} onPress={parseDeepLink}><Text>Parse auth deep link</Text></Pressable>
+            <Pressable style={styles.btn} onPress={() => setScreen("restricted")}><Text>Restricted Account</Text></Pressable>
+          </View>
         </View>
 
         {screen === "resetRequest" && (
           <View style={styles.panel}>
             <Text style={styles.panelTitle}>Password reset request</Text>
-            <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="Email" />
-            <Pressable style={styles.btn} onPress={requestReset}><Text>Submit request</Text></Pressable>
+            <AuthField label="Email" value={email} onChangeText={setEmail} placeholder="Email" error={emailError} />
+            <Pressable style={styles.btn} onPress={requestReset} disabled={pending}><Text>{pending ? "Submitting..." : "Submit request"}</Text></Pressable>
           </View>
         )}
 
         {screen === "resetComplete" && (
           <View style={styles.panel}>
             <Text style={styles.panelTitle}>Password reset completion</Text>
-            <TextInput style={styles.input} value={token} onChangeText={setToken} placeholder="Reset token" />
-            <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="New password" />
-            <Pressable style={styles.btn} onPress={completeReset}><Text>Complete reset</Text></Pressable>
+            <AuthField label="Reset token" value={token} onChangeText={setToken} placeholder="Reset token" />
+            <AuthField label="New password" value={password} onChangeText={setPassword} placeholder="New password" secure error={passwordError} />
+            <Pressable style={styles.btn} onPress={completeReset} disabled={pending}><Text>{pending ? "Submitting..." : "Complete reset"}</Text></Pressable>
           </View>
         )}
 
@@ -73,10 +113,17 @@ export default function App() {
           <View style={styles.panel}>
             <Text style={styles.panelTitle}>Verification pending</Text>
             <Text style={styles.panelBody}>Account still needs verification.</Text>
-            <TextInput style={styles.input} value={token} onChangeText={setToken} placeholder="Verification token" />
-            <Pressable style={styles.btn} onPress={resendVerification}><Text>Submit / resend verification</Text></Pressable>
+            <AuthField label="Verification token" value={token} onChangeText={setToken} placeholder="Verification token" />
+            <Pressable style={styles.btn} onPress={resendVerification} disabled={pending}><Text>{pending ? "Submitting..." : "Submit / resend verification"}</Text></Pressable>
           </View>
         )}
+        {screen === "restricted" && (
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>Restricted account</Text>
+            <Text style={styles.panelBody}>This account is disabled or banned. Contact project maintainers for recovery support.</Text>
+          </View>
+        )}
+        {serverError ? <Text style={{ color: "#a83d1b" }}>{serverError}</Text> : null}
       </ScrollView>
     </SafeAreaView>
   );
